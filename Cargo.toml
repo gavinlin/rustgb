@@ -1,0 +1,7 @@
+[package]
+name = "rustgb"
+version = "0.1.0"
+authors = ["Gavin <gavin@spriggy.com.au>"]
+edition = "2018"
+
+[dependencies]
