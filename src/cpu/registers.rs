@@ -73,7 +73,7 @@ impl Registers {
         }
     }
 
-    pub fn set_byte(&mut self, value: u8, byte_target: ByteTarget) {
+    pub fn set_byte(&mut self, byte_target: ByteTarget, value: u8) {
         match byte_target {
             ByteTarget::A => {
                 self.a = value;
@@ -102,7 +102,7 @@ impl Registers {
         }
     }
 
-    pub fn get_byte(&mut self, byte_target: ByteTarget) -> u8 {
+    pub fn get_byte(self, byte_target: ByteTarget) -> u8 {
         match byte_target {
             ByteTarget::A => self.a,
             ByteTarget::B => self.b,
@@ -120,6 +120,10 @@ impl Registers {
         self.f.subtract = subtract;
         self.f.carry = carry;
         self.f.half_carry = half_carry;
+    }
+
+    pub fn get_carry(self) -> bool {
+        self.f.carry
     }
 
     pub fn set_word(&mut self, value: u16, word_target: WordTarget) {
@@ -143,7 +147,7 @@ impl Registers {
         }
     }
 
-    pub fn get_word(&mut self, word_target: WordTarget) -> u16 {
+    pub fn get_word(self, word_target: WordTarget) -> u16 {
         match word_target {
             WordTarget::BC => (self.b as u16) << 8 | self.c as u16,
             WordTarget::DE => (self.d as u16) << 8 | self.e as u16,
