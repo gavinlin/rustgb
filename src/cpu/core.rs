@@ -1,6 +1,7 @@
 use super::registers::*;
 
 pub enum Instruction {
+    LD(ByteTarget, ByteTarget),
     ADD(ByteTarget),
     ADC(ByteTarget),
     SUB(ByteTarget),
@@ -28,6 +29,10 @@ impl CPU {
 
     pub fn execute(&mut self, instruction: Instruction) {
         match instruction {
+            Instruction::LD(from, target) => {
+                let value = self.registers.get_byte(from);
+                self.registers.set_byte(target, value);
+            },
             Instruction::ADD(target) => {
                 let value = self.registers.get_byte(target);
                 self.add(value);
@@ -78,6 +83,14 @@ impl CPU {
         self.registers.set_byte(ByteTarget::A, result);
     }
 
+    fn cp(self, value: u8) {
+        self.alu_sub(value, false);
+    }
+
+    fn and(self, value: u8) {
+        
+    }
+
     fn alu_sub(&mut self, value: u8, use_carry: bool) -> u8 {
         let mut regs = self.registers;
         let cy = if use_carry && regs.get_carry() { 1 } else { 0 };
@@ -89,4 +102,5 @@ impl CPU {
                       (regs.get_byte(ByteTarget::A) & 0xF) < (value & 0xF) + cy);
         result
     }
+
 }
