@@ -83,12 +83,48 @@ impl CPU {
         self.registers.set_byte(ByteTarget::A, result);
     }
 
-    fn cp(self, value: u8) {
+    fn cp(&mut self, value: u8) {
         self.alu_sub(value, false);
     }
 
-    fn and(self, value: u8) {
-        
+    fn and(&mut self, value: u8) {
+        let new_value = self.registers.get_byte(ByteTarget::A) & value;
+        self.registers.set_byte(ByteTarget::A, new_value);
+        self.registers.set_flag(new_value == 0, false, true, false);
+    }
+
+    fn or(&mut self, value: u8) {
+        let new_value = self.registers.get_byte(ByteTarget::A) | value;
+        self.registers.set_byte(ByteTarget::A, new_value);
+        self.registers.set_flag(new_value == 0, false, false, false);
+    }
+
+    fn xor(&mut self, value: u8) {
+        let new_value = self.registers.get_byte(ByteTarget::A) ^ value;
+        self.registers.set_byte(ByteTarget::A, new_value);
+        self.registers.set_flag(new_value == 0, false, false, false);
+    }
+
+    fn inc(&mut self, value: u8, out: ByteTarget) {
+        let new_value = value.wrapping_add(1);
+        let half_carry = value & 0xF == 0xF;
+        let carry = self.registers.get_carry();
+        self.registers.set_flag(new_value == 0, false, carry, half_carry);
+        self.registers.set_byte(out, new_value);
+    }
+
+    fn dec(&mut self, value: u8, out: ByteTarget) {
+        let new_value = value.wrapping_sub(1);
+        let half_carry = value & 0xF == 0;
+        let carry = self.registers.get_carry();
+        self.registers.set_flag(new_value == 0, true, carry, half_carry);
+        self.registers.set_byte(out, new_value);
+    }
+
+    fn rlca(self) {
+        let value = self.registers.get_byte(ByteTarget::A);
+        let new_value = self.alu_rlc(value, false);
+        self.registers.set_byte(ByteTarget::A, new_value);
     }
 
     fn alu_sub(&mut self, value: u8, use_carry: bool) -> u8 {
@@ -103,4 +139,12 @@ impl CPU {
         result
     }
 
+    fn alu_rlc(&mut self, value: u8, set_zero: bool) -> u8 {
+        let co = value & 0x80;
+        let new_value = value.rotate_left(1);
+        self.registers.set_flag(set_zero && new_value == 0, false, co != 0, false);
+        new_value
+    }
+
 }
+
