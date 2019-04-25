@@ -121,9 +121,27 @@ impl CPU {
         self.registers.set_byte(out, new_value);
     }
 
-    fn rlca(self) {
+    fn rlca(&mut self) {
         let value = self.registers.get_byte(ByteTarget::A);
         let new_value = self.alu_rlc(value, false);
+        self.registers.set_byte(ByteTarget::A, new_value);
+    }
+
+    fn rla(&mut self) {
+        let value = self.registers.get_byte(ByteTarget::A);
+        let new_value = self.alu_rl(value, false);
+        self.registers.set_byte(ByteTarget::A, new_value);
+    }
+
+    fn rrca(&mut self) {
+        let value = self.registers.get_byte(ByteTarget::A);
+        let new_value = self.alu_rrc(value, false);
+        self.registers.set_byte(ByteTarget::A, new_value);
+    }
+
+    fn rra(&mut self) {
+        let value = self.registers.get_byte(ByteTarget::A);
+        let new_value = self.alu_rr(value, false);
         self.registers.set_byte(ByteTarget::A, new_value);
     }
 
@@ -139,6 +157,19 @@ impl CPU {
         result
     }
 
+    fn alu_rl(&mut self, value: u8, set_zero: bool) -> u8 {
+        let ci = if (self.registers.get_carry()) { 1 } else { 0 };
+        let co = value & 0x80;
+        let new_value = (value << 1) | ci;
+        self.registers.set_flag(
+            set_zero && new_value == 0,
+            false,
+            co != 0,
+            false
+        );
+        new_value
+    }
+
     fn alu_rlc(&mut self, value: u8, set_zero: bool) -> u8 {
         let co = value & 0x80;
         let new_value = value.rotate_left(1);
@@ -146,5 +177,23 @@ impl CPU {
         new_value
     }
 
+    fn alu_rrc(&mut self, value: u8, set_zero: bool) -> u8 {
+        let co = value & 0x01;
+        let new_value = value.rotate_right(1);
+        self.registers.set_flag(set_zero && new_value == 0, false, co != 0, false);
+        new_value
+    }
+
+    fn alu_rr(&mut self, value: u8, set_zero: bool) -> u8 {
+        let ci = if (self.registers.get_carry()) { 1 } else { 0 };
+        let co = value & 0x01;
+        let new_value = (value >> 1) | (ci << 7);
+        self.registers.set_flag(
+            set_zero && new_value == 0,
+            false,
+            co != 0,
+            false);
+        new_value
+    }
 }
 
