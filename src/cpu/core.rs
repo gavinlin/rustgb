@@ -12,10 +12,23 @@ pub enum Instruction {
 pub struct CPU {
     pub registers: Registers,
     pub pc: u16,
+    pub bus: MemoryBus,
 }
 
-pub trait CpuOps {
-    type R;
+pub struct MemoryBus {
+    memory: [u8; 0xFFFF]
+}
+
+impl MemoryBus {
+    pub fn new() -> MemoryBus {
+        MemoryBus {
+            memory: [0; 0xFFFF]
+        }
+    }
+
+    pub fn read_byte(&self, address: u16) -> u8 {
+        self.memory[address as usize]
+    }
 }
 
 impl CPU {
@@ -23,7 +36,8 @@ impl CPU {
     pub fn new() -> CPU {
         CPU{
             registers: Registers::new(),
-            pc: 0
+            pc: 0,
+            bus: MemoryBus::new(),
         }
     }
 
@@ -144,6 +158,94 @@ impl CPU {
         let new_value = self.alu_rr(value, false);
         self.registers.set_byte(ByteTarget::A, new_value);
     }
+
+    fn rlc(&mut self, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let new_value = self.alu_rlc(value, true);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn rl(&mut self, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let new_value = self.alu_rl(value, true);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn rrc(&mut self, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let new_value = self.alu_rrc(value, true);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn rr(&mut self, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let new_value = self.alu_rr(value, true);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn sla(&mut self, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let co = value & 0x80;
+        let new_value = value << 1;
+        self.registers.set_flag(
+            new_value == 0,
+            false,
+            co != 0,
+            false);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn sra(&mut self, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let co = value & 0x01;
+        let hi = value & 0x80;
+        let new_value = (value >> 1) | hi;
+        self.registers.set_flag(
+            new_value == 0,
+            false,
+            co != 0,
+            false);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn srl(&mut self, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let co = value & 0x01;
+        let new_value = value >> 1;
+        self.registers.set_flag(
+            new_value == 0,
+            false,
+            co != 0,
+            false);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn swap(&mut self, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let new_value = (value >> 4) | (value << 4);
+        self.registers.set_flag(
+            new_value == 0,
+            false,
+            false,
+            false);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn bit(&mut self, bit: usize, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let new_value = value & (1 << bit);
+        let carry = self.registers.get_carry();
+        self.registers.set_flag(
+            new_value == 0,
+            false,
+            carry,
+            true);
+    }
+
+    fn set(&mut self, bit: usize, from: ByteTarget) {
+
+    }
+
 
     fn alu_sub(&mut self, value: u8, use_carry: bool) -> u8 {
         let mut regs = self.registers;
