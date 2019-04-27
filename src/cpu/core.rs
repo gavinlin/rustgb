@@ -12,6 +12,7 @@ pub enum Instruction {
 pub struct CPU {
     pub registers: Registers,
     pub pc: u16,
+    pub sp: u16,
     pub bus: MemoryBus,
 }
 
@@ -37,6 +38,7 @@ impl CPU {
         CPU{
             registers: Registers::new(),
             pc: 0,
+            sp: 0,
             bus: MemoryBus::new(),
         }
     }
@@ -243,7 +245,19 @@ impl CPU {
     }
 
     fn set(&mut self, bit: usize, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let new_value = value | (1 << bit);
+        self.registers.set_byte(from, new_value);
+    }
 
+    fn res(&mut self, bit:usize, from: ByteTarget) {
+        let value = self.registers.get_byte(from);
+        let new_value = value & !(1 << bit);
+        self.registers.set_byte(from, new_value);
+    }
+
+    fn jp(&mut self) {
+        
     }
 
 
