@@ -6,6 +6,8 @@ pub enum Instruction {
     ADC(ByteTarget),
     SUB(ByteTarget),
     SBC(ByteTarget),
+    INC(ByteTarget),
+    JP(JumpTest),
 }
 
 
@@ -32,6 +34,14 @@ impl MemoryBus {
     }
 }
 
+enum JumpTest {
+    NOT_ZERO,
+    ZERO,
+    NOT_CARRY,
+    CARRY,
+    ALWAYS
+}
+
 impl CPU {
 
     pub fn new() -> CPU {
@@ -43,29 +53,76 @@ impl CPU {
         }
     }
 
-    pub fn execute(&mut self, instruction: Instruction) {
+    fn step(&mut self) {
+        let mut instriction_byte = self.bus.read_byte(self.pc);
+        let prefixed = instriction_byte == 0xCB;
+        if prefixed {
+            instriction_byte = self.bus.read_byte(self.pc + 1);
+        }
+
+        let next_pc = if let Some(instruction) = Instruction::from_byte(instriction_byte, prefixed) {
+            self.execute(instruction)
+        } else {
+            let descrption = format!("0x{}{:x}", if prefixed { "cb" } else { "" }, instriction_byte);
+            panic!("Unknown instruction found for: {}", descrption);
+        };
+
+        self.pc = next_pc;
+    }
+
+    pub fn execute(&mut self, instruction: Instruction) -> u16 {
         match instruction {
+            Instruction::JP(test) => {
+                let jump_condition = match test {
+                    JumpTest::NOT_ZERO => !self.registers.get_zero(),
+                    JumpTest::NOT_CARRY => !self.registers.get_carry(),
+                    JumpTest::ZERO => self.registers.get_zero(),
+                    JumpTest::CARRY => self.registers.get_carry(),
+                    JumpTest::ALWAYS => true
+                };
+                self.jump(jump_condition)
+            }
             Instruction::LD(from, target) => {
                 let value = self.registers.get_byte(from);
                 self.registers.set_byte(target, value);
+                self.pc.wrapping_add(1)
             },
             Instruction::ADD(target) => {
                 let value = self.registers.get_byte(target);
                 self.add(value);
+                self.pc.wrapping_add(1)
             },
             Instruction::ADC(target) => {
                 let value = self.registers.get_byte(target);
                 self.adc(value);
+                self.pc.wrapping_add(1)
             }
             Instruction::SUB(target) => {
                 let value = self.registers.get_byte(target);
                 self.sub(value);
+                self.pc.wrapping_add(1)
             }
             Instruction::SBC(target) => {
                 let value = self.registers.get_byte(target);
                 self.sbc(value);
+                self.pc.wrapping_add(1)
             }
-            _ => { /* TODO: more instruction */}
+            Instruction::INC(target) => {
+                let value = self.registers.get_byte(target);
+                self.inc(value, target);
+                self.pc.wrapping_add(1)
+            }
+            _ => { /* TODO: more instruction */ self.pc}
+        }
+    }
+
+    fn jump(&self, should_jump: bool) -> u16 {
+        if should_jump {
+            let least_significant_byte = self.bus.read_byte(self.pc + 1) as u16;
+            let most_significatnt_byte = self.bus.read_byte(self.pc + 2) as u16;
+            (most_significatnt_byte << 8) | least_significant_byte
+        } else {
+            self.pc.wrapping_add(3)
         }
     }
 
@@ -256,11 +313,6 @@ impl CPU {
         self.registers.set_byte(from, new_value);
     }
 
-    fn jp(&mut self) {
-        
-    }
-
-
     fn alu_sub(&mut self, value: u8, use_carry: bool) -> u8 {
         let mut regs = self.registers;
         let cy = if use_carry && regs.get_carry() { 1 } else { 0 };
@@ -313,3 +365,26 @@ impl CPU {
     }
 }
 
+impl Instruction {
+    fn from_byte(byte: u8, prefixed: bool) -> Option<Instruction> {
+        if prefixed {
+            Instruction::from_byte_prefixed(byte)
+        } else {
+            Instruction::from_byte_normal(byte)
+        }
+    }
+
+    fn from_byte_prefixed(byte: u8) -> Option<Instruction> {
+        match byte {
+            _ => None
+        }
+    }
+
+    fn from_byte_normal(byte: u8) -> Option<Instruction> {
+        match byte {
+            0x04 => Some(Instruction::INC(ByteTarget::B)),
+            _ => None
+        }
+        
+    }
+}

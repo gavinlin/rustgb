@@ -126,6 +126,10 @@ impl Registers {
         self.f.carry
     }
 
+    pub fn get_zero(self) -> bool {
+        self.f.zero
+    }
+
     pub fn set_word(&mut self, value: u16, word_target: WordTarget) {
         match word_target {
             WordTarget::BC => {
